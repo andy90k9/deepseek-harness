@@ -7336,6 +7336,22 @@ importers:
         specifier: workspace:*
         version: link:../../core/session
 
+  packages/e2e/orchestrator:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:*
+        version: link:../../util/brand
+      '@deepseek-ai/dsh-storage-domain':
+        specifier: workspace:*
+        version: link:../../storage/storage-domain
+
   packages/experimental/agent-team:
     dependencies:
       '@deepseek-ai/dsh-brand':
