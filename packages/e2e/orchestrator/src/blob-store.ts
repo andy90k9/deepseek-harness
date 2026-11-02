@@ -47,7 +47,7 @@ export function copyFileToBlob(sourcePath: string, blobRoot: string): { digest: 
 
   if (existsSync(destPath)) {
     if (!validateDigest(digest)) throw new Error(`computed digest fails grammar check: ${digest}`)
-    return { digest: digest as Digest, blobUri: blobUriOf(digest) }
+    return { digest, blobUri: blobUriOf(digest) }
   }
 
   mkdirSync(destDir, { recursive: true })
@@ -77,7 +77,7 @@ export function copyFileToBlob(sourcePath: string, blobRoot: string): { digest: 
   }
 
   if (!validateDigest(digest)) throw new Error(`computed digest fails grammar check: ${digest}`)
-  return { digest: digest as Digest, blobUri: blobUriOf(digest) }
+  return { digest, blobUri: blobUriOf(digest) }
 }
 
 /**

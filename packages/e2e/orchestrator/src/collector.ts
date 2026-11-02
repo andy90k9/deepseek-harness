@@ -9,14 +9,13 @@
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
-import type { RunId, Digest } from './id.ts'
-import type { CopyStatus, ArtifactRecord, ChangeSummaryRecord } from './types.ts'
+import type { Digest } from './id.ts'
+import type { CopyStatus, ArtifactRecord } from './types.ts'
 import { OrchestratorError } from './errors.ts'
 import { copyFileToBlob } from './blob-store.ts'
 
 /** One line of Session JSONL. */
-interface JsonlEvent {
+export interface JsonlEvent {
   type?: string
   data?: unknown
 }
@@ -27,7 +26,7 @@ interface PresentedFileDecl {
   description?: string
 }
 
-interface PresentedPayload {
+export interface PresentedPayload {
   turn: number
   callId?: string
   files: PresentedFileDecl[]
@@ -105,7 +104,6 @@ export function extractPresentedDecls(events: JsonlEvent[]): PresentedPayload[] 
  * missing artifacts should fail the run.
  */
 export function collectArtifacts(
-  runId: RunId,
   presented: PresentedPayload[],
   blobRoot: string,
 ): ArtifactRecord[] {

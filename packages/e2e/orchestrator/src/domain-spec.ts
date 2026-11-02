@@ -7,7 +7,7 @@
  */
 
 import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain'
-import z from '@deepseek-ai/schemastery'
+import { z } from 'zod'
 
 const runErrorSchema = z.object({
   code: z.string(),
@@ -16,6 +16,10 @@ const runErrorSchema = z.object({
 })
 
 export const runRecordSchema = z.object({
+  // The row key is the run id, and the persisted document repeats it so a scan
+  // or export can recover it without the key (mirrors e2e_run.run_id in the
+  // Postgres DDL of schema.md).
+  runId: z.string(),
   sessionId: z.string().nullable(),
   taskId: z.string(),
   profile: z.enum(['headless', 'sdk']),

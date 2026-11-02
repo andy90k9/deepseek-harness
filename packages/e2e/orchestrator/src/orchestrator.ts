@@ -10,8 +10,8 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { dirname, join, resolve, sep } from 'node:path'
-import { newRunId, validateRunId, validateTaskId, type RunId, type TaskId } from './id.ts'
+import { dirname, join, resolve } from 'node:path'
+import { newRunId, validateRunId, validateTaskId, type RunId } from './id.ts'
 import type {
   StartRunRequest, RunRecord, RunStatus, OrchestratorOptions, ArtifactRecord,
 } from './types.ts'
@@ -22,7 +22,7 @@ import {
   newRunRecord, upsertRun, upsertArtifact, withStatus, withExitInfo, withError,
 } from './etl.ts'
 import {
-  parseJsonlEvents, extractSessionId, extractTurnEndKind,
+  parseJsonlEvents, extractTurnEndKind,
   extractPresentedDecls, collectArtifacts,
 } from './collector.ts'
 
@@ -82,7 +82,7 @@ export class Orchestrator {
 
     // Self-skip when no API key is configured
     if (!process.env.DEEPSEEK_API_KEY) {
-      const rec = newRunRecord(runId, request.taskId as TaskId, request.profile ?? 'headless', request.sessionId ?? null)
+      const rec = newRunRecord(runId, request.taskId, request.profile ?? 'headless', request.sessionId ?? null)
       const skipped: RunRecord = withStatus(rec, 'skipped')
       skipped.finishedAt = new Date().toISOString()
       const err: PersistedError = {
@@ -96,7 +96,7 @@ export class Orchestrator {
     }
 
     // Write queued run row
-    const rec0 = newRunRecord(runId, request.taskId as TaskId, request.profile ?? 'headless', request.sessionId ?? null)
+    const rec0 = newRunRecord(runId, request.taskId, request.profile ?? 'headless', request.sessionId ?? null)
     await upsertRun(this.domain, rec0)
 
     // Exec dsh headless
@@ -109,7 +109,8 @@ export class Orchestrator {
 
     try {
       const result = await this.runDshHeadless({
-        prompt: request.prompt,
+        // exactOptionalPropertyTypes: omit the key instead of passing undefined.
+        ...(request.prompt !== undefined ? { prompt: request.prompt } : {}),
         workspace,
         profile: request.profile ?? 'headless',
         sessionId: request.sessionId ?? null,
@@ -136,7 +137,7 @@ export class Orchestrator {
 
     // Timeout
     if (timedOut) {
-      const aborted = withExitInfo(runningRecord, exitCode ?? 1, null)
+      const aborted = withExitInfo(runningRecord, exitCode, null)
       const ab = withError(withStatus(aborted, 'aborted'), {
         code: 'dsh_timeout',
         message: `dsh timed out after ${timeoutMs}ms`,
@@ -167,7 +168,7 @@ export class Orchestrator {
       events = parseJsonlEvents(jsonlPath)
       turnEndKind = extractTurnEndKind(events)
     } catch (err) {
-      const failed = withExitInfo(runningRecord, exitCode ?? 1, null)
+      const failed = withExitInfo(runningRecord, exitCode, null)
       const code = err instanceof OrchestratorError ? err.code : 'jsonl_corrupt'
       const ab = withError(withStatus(failed, 'failed'), {
         code,
@@ -179,14 +180,14 @@ export class Orchestrator {
     }
 
     // Collect artifacts while workspace is still alive
-    const initialStatus = mapKindToInitialStatus(exitCode ?? 1, turnEndKind)
-    const collectingRec = withExitInfo(runningRecord, exitCode ?? 1, turnEndKind)
+    const initialStatus = mapKindToInitialStatus(exitCode, turnEndKind)
+    const collectingRec = withExitInfo(runningRecord, exitCode, turnEndKind)
     collectingRec.status = initialStatus
     collectingRec.logUri = jsonlPath
     await upsertRun(this.domain, collectingRec)
 
     const presented = extractPresentedDecls(events)
-    const artifacts: ArtifactRecord[] = collectArtifacts(runId, presented, this.options.blobRoot)
+    const artifacts: ArtifactRecord[] = collectArtifacts(presented, this.options.blobRoot)
     for (const art of artifacts) {
       await upsertArtifact(this.domain, runId, art)
     }
@@ -204,7 +205,7 @@ export class Orchestrator {
       finalStatus = 'failed'
       persistedError = {
         code: 'artifact_copy_missing',
-        message: `some presented paths were missing or unreadable at collect time; see artifact rows`,
+        message: 'some presented paths were missing or unreadable at collect time; see artifact rows',
         operation: 'collector.collectArtifacts',
       }
     } else if (exitCode === 0 && turnEndKind === 'completed') {
@@ -234,7 +235,7 @@ export class Orchestrator {
 
   /** Read a stored run by id; null when absent. */
   get(runId: RunId): RunRecord | null {
-    return this.domain.table('runs').get(runId as string) as RunRecord | undefined ?? null
+    return this.domain.table('runs').get(runId) as RunRecord | undefined ?? null
   }
 
   // --------------------------------------------------------------------------
@@ -251,13 +252,14 @@ export class Orchestrator {
     if (!req.workspace || !existsSync(req.workspace)) {
       throw new OrchestratorError('invalid_request', 'orchestrator.validate', 'workspace must point to an existing directory')
     }
-    if (req.sessionId !== undefined && req.sessionId !== null && !req.sessionId) {
+    if (req.sessionId !== undefined && req.sessionId === '') {
       throw new OrchestratorError('invalid_request', 'orchestrator.validate', 'session_id must be non-empty string when provided')
     }
     if (req.timeoutMs !== undefined && (req.timeoutMs <= 0 || !Number.isFinite(req.timeoutMs))) {
       throw new OrchestratorError('invalid_request', 'orchestrator.validate', 'timeout_ms must be positive finite integer')
     }
-    if (req.profile && req.profile !== 'headless' && req.profile !== 'sdk') {
+    const profileInput: string | undefined = req.profile
+    if (profileInput !== undefined && profileInput !== 'headless' && profileInput !== 'sdk') {
       throw new OrchestratorError('invalid_request', 'orchestrator.validate', 'profile must be headless or sdk')
     }
     if (validateRunId(req.taskId)) {
@@ -289,7 +291,7 @@ export class Orchestrator {
           stdio: ['pipe', 'pipe', 'pipe'],
         })
       } catch (err) {
-        reject(err)
+        reject(err instanceof Error ? err : new Error(String(err)))
         return
       }
 
@@ -328,7 +330,9 @@ export class Orchestrator {
         }, timeoutMs)
       }
 
-      proc.on('error', reject)
+      proc.on('error', (err) => {
+        reject(err instanceof Error ? err : new Error(String(err)))
+      })
       proc.on('close', (code) => {
         if (timer) clearTimeout(timer)
         const exitCode = code ?? 0

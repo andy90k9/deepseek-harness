@@ -242,6 +242,9 @@ flowchart TD
   subgraph group_document["packages/document"]
     pkg_office_to_pdf["office-to-pdf"]
   end
+  subgraph group_e2e["packages/e2e"]
+    pkg_e2e_orchestrator["e2e-orchestrator"]
+  end
   subgraph group_experimental["packages/experimental"]
     pkg_cua["cua"]
     pkg_experimental_agent_team["experimental-agent-team"]
@@ -494,6 +497,8 @@ flowchart TD
   pkg_attachment_local --> pkg_home_paths
   pkg_hmr --> pkg_app_boot
   pkg_hmr --> pkg_cmdline
+  pkg_e2e_orchestrator --> pkg_brand
+  pkg_e2e_orchestrator --> pkg_storage_domain
   pkg_experimental_computer_use_cua_driver_mcp --> pkg_computer_use
   pkg_experimental_inspector --> pkg_client_connection
   pkg_experimental_inspector --> pkg_client_modules
@@ -1611,6 +1616,7 @@ flowchart TD
 | [`api-terminal-controller`](../packages/api/terminal-controller) | `api` | [`subprocess`](../packages/subprocess/subprocess) |
 | [`attachment-local`](../packages/attachment/attachment-local) | `attachment` | [`attachment`](../packages/attachment/attachment), [`home-paths`](../packages/util/home-paths) |
 | [`hmr`](../packages/boot/hmr) | `boot` | [`app-boot`](../packages/boot/app-boot), [`cmdline`](../packages/boot/cmdline) |
+| [`e2e-orchestrator`](../packages/e2e/orchestrator) | `e2e` | [`brand`](../packages/util/brand), [`storage-domain`](../packages/storage/storage-domain) |
 | [`experimental-computer-use-cua-driver-mcp`](../packages/experimental/computer-use-cua-driver-mcp) | `experimental` | [`computer-use`](../packages/computer-use/computer-use) |
 | [`experimental-inspector`](../packages/experimental/inspector) | `experimental` | [`client-connection`](../packages/client/connection), [`client-modules`](../packages/client/modules), [`host-webserver`](../packages/host/webserver) |
 | [`experimental-webworker-runtime`](../packages/experimental/webworker-runtime) | `experimental` | [`client-connection`](../packages/client/connection), [`client-modules`](../packages/client/modules), [`host-webserver`](../packages/host/webserver) |

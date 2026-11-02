@@ -22,7 +22,7 @@ export type Digest = string & { readonly __digest?: unique symbol }
 
 /** Generate a fresh run_id. Called BEFORE dsh exec (run_id ≠ session_id). */
 export function newRunId(): RunId {
-  return `run_${randomUUID()}` as RunId
+  return `run_${randomUUID()}`
 }
 
 /** Validate and return the run_id; throws OrchestratorError-style string on mismatch. */
@@ -46,5 +46,5 @@ export function blobUriOf(digest: string): string {
 /** Parse a blob URI back to digest. */
 export function digestFromBlobUri(uri: string): string | null {
   const m = uri.match(/^blob:\/\/sha256\/([0-9a-f]{64})$/)
-  return m ? m[1]! : null
+  return m?.[1] ?? null
 }

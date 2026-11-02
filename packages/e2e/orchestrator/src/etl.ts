@@ -41,7 +41,19 @@ export async function upsertRun(
   record: RunRecord,
 ): Promise<void> {
   const runs = domain.table('runs')
-  await runs.put(record.runId, record as unknown as Record<string, unknown>)
+  await runs.put(record.runId, {
+    runId: record.runId,
+    sessionId: record.sessionId,
+    taskId: record.taskId,
+    profile: record.profile,
+    status: record.status,
+    dshExitCode: record.dshExitCode,
+    turnEndKind: record.turnEndKind,
+    startedAt: record.startedAt,
+    finishedAt: record.finishedAt,
+    logUri: record.logUri,
+    error: record.error,
+  })
 }
 
 /** Upsert one artifact row by composite (run_id, path) key. */
@@ -60,7 +72,7 @@ export async function upsertArtifact(
     description: record.description ?? null,
     copyStatus: record.copyStatus,
   }
-  await artifacts.put(key, value as unknown as Record<string, unknown>)
+  await artifacts.put(key, value)
 }
 
 /** Upsert one case result by composite (run_id, case_id) key. */
@@ -77,7 +89,7 @@ export async function upsertCaseResult(
     outcome: record.outcome,
     detail: record.detail,
   }
-  await cases.put(key, value as unknown as Record<string, unknown>)
+  await cases.put(key, value)
 }
 
 /** Upsert one change summary by composite (run_id, seq) key. */
@@ -95,7 +107,7 @@ export async function upsertChangeSummary(
     source: record.source,
     summary: record.summary,
   }
-  await summaries.put(key, value as unknown as Record<string, unknown>)
+  await summaries.put(key, value)
 }
 
 // ---- Run helpers -----------------------------------------------------------
@@ -112,7 +124,7 @@ export function newRunRecord(
     sessionId: sessionId as RunRecord['sessionId'],
     taskId,
     profile,
-    status: 'queued' as RunStatus,
+    status: 'queued',
     dshExitCode: null,
     turnEndKind: null,
     startedAt: new Date().toISOString(),
